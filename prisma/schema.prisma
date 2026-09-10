@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Vercel Postgres (Neon) setter disse miljøvariablene automatisk
+  // når du kobler en database til Vercel-prosjektet.
+  url       = env("POSTGRES_PRISMA_URL")
+  directUrl = env("POSTGRES_URL_NON_POOLING")
+}
+
+model Apartment {
+  id           String    @id @default(cuid())
+  number       String    @unique // leilighetsnummer, f.eks. "505"
+  andelsnummer String? // valgfritt, f.eks. "33"
+  name         String? // valgfritt, f.eks. beboers navn
+  bookings     Booking[]
+  createdAt    DateTime  @default(now())
+}
+
+model ParkingSpot {
+  id        String    @id @default(cuid())
+  name      String    @unique // f.eks. "Plass 12"
+  active    Boolean   @default(true)
+  bookings  Booking[]
+  createdAt DateTime  @default(now())
+}
+
+model Booking {
+  id          String      @id @default(cuid())
+  date        DateTime    @db.Date
+  spot        ParkingSpot @relation(fields: [spotId], references: [id], onDelete: Cascade)
+  spotId      String
+  apartment   Apartment   @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  apartmentId String
+  createdAt   DateTime    @default(now())
+
+  @@unique([spotId, date])
+}
+
+model Settings {
+  id          Int    @id @default(1)
+  pricePerDay Int    @default(100)
+  vippsNumber String @default("")
+}

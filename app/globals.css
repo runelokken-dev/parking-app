@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-paper text-ink;
+  }
+  :focus-visible {
+    outline: 2px solid #204e42;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded border px-3 py-1.5 text-sm font-medium transition-colors;
+  }
+  .btn-primary {
+    @apply btn border-pine bg-pine text-white hover:bg-pine-dark;
+  }
+  .btn-secondary {
+    @apply btn border-border bg-surface text-ink hover:bg-paper;
+  }
+  .btn-danger {
+    @apply btn border-clay bg-surface text-clay hover:bg-clay-light;
+  }
+  .card {
+    @apply rounded border border-border bg-surface p-5;
+  }
+  .field {
+    @apply w-full rounded border border-border bg-surface px-3 py-2 text-sm text-ink;
+  }
+  .label {
+    @apply mb-1 block text-sm font-medium text-ink;
+  }
+}

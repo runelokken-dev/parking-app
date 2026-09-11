@@ -58,3 +58,44 @@ export function isWeekend(date: Date): boolean {
   const day = date.getUTCDay();
   return day === 0 || day === 6;
 }
+
+// --- Utvidelser for tidsrom-basert booking ---
+
+export const MAX_ADVANCE_DAYS = 60; // ca. 2 måneder fram i tid
+
+export function combineDateAndHour(dateKey: string, hour: number): Date {
+  const [y, m, d] = dateKey.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d, hour, 0, 0));
+}
+
+export function maxBookableDate(): Date {
+  return addDays(todayUtcMidnight(), MAX_ADVANCE_DAYS);
+}
+
+const dateTimeFormatter = new Intl.DateTimeFormat("nb-NO", {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "UTC",
+});
+
+const hourFormatter = new Intl.DateTimeFormat("nb-NO", {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "UTC",
+});
+
+export function formatDateTime(date: Date): string {
+  const s = dateTimeFormatter.format(date);
+  return s.charAt(0).toUpperCase() + s.slice(1).replace(".", "");
+}
+
+export function formatHour(date: Date): string {
+  return hourFormatter.format(date);
+}
+
+export function durationHours(start: Date, end: Date): number {
+  return (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+}

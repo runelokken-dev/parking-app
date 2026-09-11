@@ -1,21 +1,36 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/session";
-import { formatDayMonth, todayUtcMidnight } from "@/lib/dates";
+import { isVippsConfigured } from "@/lib/vipps";
+import { formatDateTime, addDays, todayUtcMidnight, toDateKey, parseDateKey } from "@/lib/dates";
 import {
   addApartment,
   addApartmentsBulk,
   addSpot,
   adminLogin,
   adminLogout,
+  cancelBookingAsAdmin,
   deleteApartment,
-  deleteBookingAsAdmin,
   deleteSpot,
   toggleSpot,
   updateSettings,
 } from "@/app/admin/actions";
 
 export const dynamic = "force-dynamic";
+
+const STATUS_LABEL: Record<string, string> = {
+  CONFIRMED: "Bekreftet",
+  PENDING: "Venter på betaling",
+  CANCELLED: "Avbestilt",
+  EXPIRED: "Utløpt (ubetalt)",
+};
+
+const STATUS_CLASS: Record<string, string> = {
+  CONFIRMED: "bg-pine-light text-pine-dark",
+  PENDING: "bg-booked text-muted",
+  CANCELLED: "bg-clay-light text-clay",
+  EXPIRED: "bg-clay-light text-clay",
+};
 
 export default async function AdminPage({
   searchParams,
@@ -60,15 +75,22 @@ export default async function AdminPage({
     );
   }
 
-  const [apartments, spots, settings, upcomingBookings] = await Promise.all([
+  const defaultFra = toDateKey(addDays(todayUtcMidnight(), -30));
+  const defaultTil = toDateKey(addDays(todayUtcMidnight(), 60));
+  const fra = String(searchParams.fra || defaultFra);
+  const til = String(searchParams.til || defaultTil);
+
+  const [apartments, spots, settings, bookings] = await Promise.all([
     prisma.apartment.findMany({ orderBy: { number: "asc" } }),
     prisma.parkingSpot.findMany({ orderBy: { name: "asc" } }),
     prisma.settings.findUnique({ where: { id: 1 } }),
     prisma.booking.findMany({
-      where: { date: { gte: todayUtcMidnight() } },
+      where: {
+        startTime: { gte: parseDateKey(fra), lt: addDays(parseDateKey(til), 1) },
+      },
       include: { apartment: true, spot: true },
-      orderBy: { date: "asc" },
-      take: 100,
+      orderBy: { startTime: "desc" },
+      take: 300,
     }),
   ]);
 
@@ -88,10 +110,23 @@ export default async function AdminPage({
         </Link>
       </p>
 
-      {/* Innstillinger */}
+      {/* Priser */}
       <section className="card mt-6">
-        <h2 className="font-medium">Pris og betaling</h2>
+        <h2 className="font-medium">Pris</h2>
         <form action={updateSettings} className="mt-3 flex flex-wrap gap-4">
+          <div>
+            <label htmlFor="pricePerHour" className="label">
+              Kr per time
+            </label>
+            <input
+              id="pricePerHour"
+              name="pricePerHour"
+              type="number"
+              min={0}
+              defaultValue={settings?.pricePerHour ?? 20}
+              className="field w-28"
+            />
+          </div>
           <div>
             <label htmlFor="pricePerDay" className="label">
               Kr per døgn
@@ -102,18 +137,20 @@ export default async function AdminPage({
               type="number"
               min={0}
               defaultValue={settings?.pricePerDay ?? 100}
-              className="field w-32"
+              className="field w-28"
             />
           </div>
           <div>
-            <label htmlFor="vippsNumber" className="label">
-              Vipps-nummer
+            <label htmlFor="dailyThresholdHours" className="label">
+              Døgnpris fra og med (timer)
             </label>
             <input
-              id="vippsNumber"
-              name="vippsNumber"
-              defaultValue={settings?.vippsNumber ?? ""}
-              className="field w-40"
+              id="dailyThresholdHours"
+              name="dailyThresholdHours"
+              type="number"
+              min={1}
+              defaultValue={settings?.dailyThresholdHours ?? 5}
+              className="field w-28"
             />
           </div>
           <div className="flex items-end">
@@ -122,6 +159,24 @@ export default async function AdminPage({
             </button>
           </div>
         </form>
+      </section>
+
+      {/* Vipps-status */}
+      <section className="card mt-6">
+        <h2 className="font-medium">Vipps-betaling</h2>
+        {isVippsConfigured() ? (
+          <p className="mt-2 text-sm text-pine-dark">
+            ✓ Koblet til med ekte Vipps API-nøkler ({process.env.VIPPS_ENVIRONMENT === "production" ? "produksjon" : "testmiljø"}).
+          </p>
+        ) : (
+          <p className="mt-2 text-sm text-muted">
+            Kjører i test-modus — beboere sendes til en simulert
+            Vipps-side i stedet for ekte betaling. Legg inn VIPPS_CLIENT_ID,
+            VIPPS_CLIENT_SECRET, VIPPS_SUBSCRIPTION_KEY og
+            VIPPS_MERCHANT_SERIAL_NUMBER som miljøvariabler på Vercel for å
+            koble til ekte Vipps.
+          </p>
+        )}
       </section>
 
       {/* Parkeringsplasser */}
@@ -142,10 +197,7 @@ export default async function AdminPage({
                 </form>
                 <form action={deleteSpot}>
                   <input type="hidden" name="id" value={s.id} />
-                  <button
-                    type="submit"
-                    className="text-sm text-clay underline"
-                  >
+                  <button type="submit" className="text-sm text-clay underline">
                     Slett
                   </button>
                 </form>
@@ -159,12 +211,7 @@ export default async function AdminPage({
           )}
         </ul>
         <form action={addSpot} className="mt-4 flex gap-2">
-          <input
-            name="name"
-            placeholder="F.eks. Plass 9"
-            required
-            className="field"
-          />
+          <input name="name" placeholder="F.eks. Plass 9" required className="field" />
           <button type="submit" className="btn-primary whitespace-nowrap">
             Legg til
           </button>
@@ -191,29 +238,14 @@ export default async function AdminPage({
             </li>
           ))}
           {apartments.length === 0 && (
-            <li className="py-2 text-sm text-muted">
-              Ingen leiligheter lagt inn.
-            </li>
+            <li className="py-2 text-sm text-muted">Ingen leiligheter lagt inn.</li>
           )}
         </ul>
 
         <form action={addApartment} className="mt-4 flex flex-wrap gap-2">
-          <input
-            name="number"
-            placeholder="Leilighetsnr."
-            required
-            className="field w-32"
-          />
-          <input
-            name="andelsnummer"
-            placeholder="Andelsnr. (valgfritt)"
-            className="field w-40"
-          />
-          <input
-            name="name"
-            placeholder="Navn (valgfritt)"
-            className="field w-40"
-          />
+          <input name="number" placeholder="Leilighetsnr." required className="field w-32" />
+          <input name="andelsnummer" placeholder="Andelsnr. (valgfritt)" className="field w-40" />
+          <input name="name" placeholder="Navn (valgfritt)" className="field w-40" />
           <button type="submit" className="btn-primary whitespace-nowrap">
             Legg til
           </button>
@@ -227,13 +259,7 @@ export default async function AdminPage({
             <label htmlFor="bulk" className="label">
               Én leilighet per linje: leilighetsnr, andelsnr, navn
             </label>
-            <textarea
-              id="bulk"
-              name="bulk"
-              rows={5}
-              placeholder={"101, 12, \n102, 13, "}
-              className="field font-mono text-xs"
-            />
+            <textarea id="bulk" name="bulk" rows={5} className="field font-mono text-xs" />
             <button type="submit" className="btn-primary">
               Importer
             </button>
@@ -241,30 +267,67 @@ export default async function AdminPage({
         </details>
       </section>
 
-      {/* Kommende bookinger */}
+      {/* Bookinger og historikk */}
       <section className="card mt-6">
-        <h2 className="font-medium">Kommende bookinger</h2>
-        <ul className="mt-3 max-h-96 divide-y divide-border overflow-y-auto">
-          {upcomingBookings.map((b) => (
-            <li key={b.id} className="flex items-center justify-between py-2 text-sm">
-              <span>
-                {formatDayMonth(b.date)} · {b.spot.name} · Leil.{" "}
-                {b.apartment.number}
-              </span>
-              <form action={deleteBookingAsAdmin}>
-                <input type="hidden" name="id" value={b.id} />
-                <button type="submit" className="text-sm text-clay underline">
-                  Slett
-                </button>
-              </form>
+        <h2 className="font-medium">Bookinger og historikk</h2>
+        <form action="/admin" method="get" className="mt-3 flex flex-wrap items-end gap-3">
+          <div>
+            <label htmlFor="fra" className="label">
+              Fra dato
+            </label>
+            <input type="date" id="fra" name="fra" defaultValue={fra} className="field" />
+          </div>
+          <div>
+            <label htmlFor="til" className="label">
+              Til dato
+            </label>
+            <input type="date" id="til" name="til" defaultValue={til} className="field" />
+          </div>
+          <button type="submit" className="btn-secondary">
+            Filtrer
+          </button>
+        </form>
+
+        <ul className="mt-4 max-h-[32rem] divide-y divide-border overflow-y-auto">
+          {bookings.map((b) => (
+            <li key={b.id} className="py-2.5 text-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <span className="font-medium">{b.spot.name}</span>{" "}
+                  <span>· Leil. {b.apartment.number}</span>
+                  <div className="text-xs text-muted">
+                    {formatDateTime(b.startTime)} – {formatDateTime(b.endTime)} · {b.priceKr},- kr
+                  </div>
+                </div>
+                <div className="flex flex-shrink-0 items-center gap-2">
+                  <span className={`rounded px-2 py-0.5 text-xs font-medium ${STATUS_CLASS[b.status]}`}>
+                    {STATUS_LABEL[b.status]}
+                  </span>
+                  {(b.status === "CONFIRMED" || b.status === "PENDING") && (
+                    <form action={cancelBookingAsAdmin}>
+                      <input type="hidden" name="id" value={b.id} />
+                      <button type="submit" className="text-xs text-clay underline">
+                        Avbestill
+                      </button>
+                    </form>
+                  )}
+                </div>
+              </div>
             </li>
           ))}
-          {upcomingBookings.length === 0 && (
-            <li className="py-2 text-sm text-muted">
-              Ingen kommende bookinger.
-            </li>
+          {bookings.length === 0 && (
+            <li className="py-2 text-sm text-muted">Ingen bookinger i valgt periode.</li>
           )}
         </ul>
+        {bookings.length === 300 && (
+          <p className="mt-2 text-xs text-muted">
+            Viser de første 300 — snevre inn datofilteret for å se alle.
+          </p>
+        )}
+        <p className="mt-3 text-xs text-muted">
+          Avbestilling av en allerede betalt booking refunderer ikke
+          automatisk — gjør det manuelt i Vipps-appen ved behov.
+        </p>
       </section>
     </main>
   );

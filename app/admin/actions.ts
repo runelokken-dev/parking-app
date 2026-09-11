@@ -33,15 +33,8 @@ export async function addApartment(formData: FormData) {
 
   await prisma.apartment.upsert({
     where: { number },
-    update: {
-      andelsnummer: andelsnummer || null,
-      name: name || null,
-    },
-    create: {
-      number,
-      andelsnummer: andelsnummer || null,
-      name: name || null,
-    },
+    update: { andelsnummer: andelsnummer || null, name: name || null },
+    create: { number, andelsnummer: andelsnummer || null, name: name || null },
   });
 
   revalidatePath("/admin");
@@ -60,15 +53,8 @@ export async function addApartmentsBulk(formData: FormData) {
     if (!number) continue;
     await prisma.apartment.upsert({
       where: { number },
-      update: {
-        andelsnummer: andelsnummer || null,
-        name: name || null,
-      },
-      create: {
-        number,
-        andelsnummer: andelsnummer || null,
-        name: name || null,
-      },
+      update: { andelsnummer: andelsnummer || null, name: name || null },
+      create: { number, andelsnummer: andelsnummer || null, name: name || null },
     });
   }
 
@@ -115,25 +101,32 @@ export async function deleteSpot(formData: FormData) {
   revalidatePath("/admin");
 }
 
-export async function deleteBookingAsAdmin(formData: FormData) {
+// Avbestiller (setter status CANCELLED) i stedet for å slette, slik at
+// bookingen fortsatt vises i historikken.
+export async function cancelBookingAsAdmin(formData: FormData) {
   requireAdmin();
   const id = String(formData.get("id") || "");
   if (!id) return;
-  await prisma.booking.delete({ where: { id } });
+  await prisma.booking.update({
+    where: { id },
+    data: { status: "CANCELLED" },
+  });
   revalidatePath("/admin");
 }
 
 export async function updateSettings(formData: FormData) {
   requireAdmin();
+  const pricePerHour = Number(formData.get("pricePerHour") || 0);
   const pricePerDay = Number(formData.get("pricePerDay") || 0);
-  const vippsNumber = String(formData.get("vippsNumber") || "").trim();
+  const dailyThresholdHours = Number(formData.get("dailyThresholdHours") || 0);
 
   await prisma.settings.upsert({
     where: { id: 1 },
-    update: { pricePerDay, vippsNumber },
-    create: { id: 1, pricePerDay, vippsNumber },
+    update: { pricePerHour, pricePerDay, dailyThresholdHours },
+    create: { id: 1, pricePerHour, pricePerDay, dailyThresholdHours },
   });
 
   revalidatePath("/admin");
   revalidatePath("/book");
+  revalidatePath("/book/ledige");
 }

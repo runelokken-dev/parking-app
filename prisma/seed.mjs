@@ -3,7 +3,6 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  // Hentet fra det gamle regnearket – juster/legg til flere i admin-panelet etterpå.
   const spots = ["Plass 12", "Plass 7", "Plass 5"];
   for (const name of spots) {
     await prisma.parkingSpot.upsert({
@@ -16,7 +15,7 @@ async function main() {
   await prisma.settings.upsert({
     where: { id: 1 },
     update: {},
-    create: { id: 1, pricePerDay: 100, vippsNumber: "18362" },
+    create: { id: 1, pricePerHour: 20, pricePerDay: 100, dailyThresholdHours: 5 },
   });
 
   console.log("Ferdig: parkeringsplasser og innstillinger er lagt inn.");

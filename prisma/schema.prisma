@@ -4,8 +4,6 @@ generator client {
 
 datasource db {
   provider  = "postgresql"
-  // Vercel Postgres (Neon) setter disse miljøvariablene automatisk
-  // når du kobler en database til Vercel-prosjektet.
   url       = env("POSTGRES_PRISMA_URL")
   directUrl = env("POSTGRES_URL_NON_POOLING")
 }
@@ -13,8 +11,8 @@ datasource db {
 model Apartment {
   id           String    @id @default(cuid())
   number       String    @unique // leilighetsnummer, f.eks. "505"
-  andelsnummer String? // valgfritt, f.eks. "33"
-  name         String? // valgfritt, f.eks. beboers navn
+  andelsnummer String?
+  name         String?
   bookings     Booking[]
   createdAt    DateTime  @default(now())
 }
@@ -27,20 +25,35 @@ model ParkingSpot {
   createdAt DateTime  @default(now())
 }
 
-model Booking {
-  id          String      @id @default(cuid())
-  date        DateTime    @db.Date
-  spot        ParkingSpot @relation(fields: [spotId], references: [id], onDelete: Cascade)
-  spotId      String
-  apartment   Apartment   @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
-  apartmentId String
-  createdAt   DateTime    @default(now())
+enum BookingStatus {
+  PENDING   // opprettet, venter på betaling (holder plassen midlertidig en kort stund)
+  CONFIRMED // betalt og bekreftet
+  CANCELLED // avbrutt av bruker/styret, eller betaling feilet/ble avbrutt
+  EXPIRED   // aldri betalt innen tidsfristen
+}
 
-  @@unique([spotId, date])
+model Booking {
+  id          String        @id @default(cuid())
+  startTime   DateTime
+  endTime     DateTime
+  spot        ParkingSpot   @relation(fields: [spotId], references: [id], onDelete: Cascade)
+  spotId      String
+  apartment   Apartment     @relation(fields: [apartmentId], references: [id], onDelete: Cascade)
+  apartmentId String
+  status      BookingStatus @default(PENDING)
+  priceKr     Int
+  paymentRef  String        @unique // vår egen unike referanse, sendt til Vipps
+  vippsState  String?       // siste kjente status fra Vipps (til feilsøking)
+  createdAt   DateTime      @default(now())
+  paidAt      DateTime?
+
+  @@index([spotId, startTime, endTime])
+  @@index([apartmentId])
 }
 
 model Settings {
-  id          Int    @id @default(1)
-  pricePerDay Int    @default(100)
-  vippsNumber String @default("")
+  id                  Int @id @default(1)
+  pricePerHour        Int @default(20)
+  pricePerDay         Int @default(100)
+  dailyThresholdHours Int @default(5) // ved denne varigheten eller mer brukes døgnpris
 }

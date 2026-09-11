@@ -2,24 +2,20 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getApartmentId } from "@/lib/session";
 import { switchApartment } from "@/app/actions";
-import { bookSpot, cancelBooking } from "@/app/book/actions";
+import { cancelPendingBooking } from "@/app/book/actions";
+import { reapExpiredPending } from "@/lib/availability";
 import {
-  addDays,
-  formatDayMonth,
-  formatMonthLabel,
-  formatWeekday,
-  isWeekend,
+  formatDateTime,
+  maxBookableDate,
   todayUtcMidnight,
   toDateKey,
 } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
-export default async function BookPage({
-  searchParams,
-}: {
-  searchParams: { [key: string]: string | string[] | undefined };
-}) {
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+export default async function BookPage() {
   const apartmentId = getApartmentId();
   if (!apartmentId) redirect("/");
 
@@ -28,34 +24,21 @@ export default async function BookPage({
   });
   if (!apartment) redirect("/");
 
-  const days = Math.min(
-    Number(searchParams.dager) || 45,
-    120
-  );
-  const feil = searchParams.feil;
+  await reapExpiredPending();
 
-  const [spots, settings] = await Promise.all([
-    prisma.parkingSpot.findMany({
-      where: { active: true },
-      orderBy: { name: "asc" },
-    }),
-    prisma.settings.findUnique({ where: { id: 1 } }),
-  ]);
+  const minDate = toDateKey(todayUtcMidnight());
+  const maxDate = toDateKey(maxBookableDate());
 
-  const start = todayUtcMidnight();
-  const end = addDays(start, days);
-
-  const bookings = await prisma.booking.findMany({
-    where: { date: { gte: start, lt: end } },
-    include: { apartment: true },
+  const myBookings = await prisma.booking.findMany({
+    where: {
+      apartmentId,
+      status: { in: ["PENDING", "CONFIRMED"] },
+      endTime: { gte: new Date() },
+    },
+    include: { spot: true },
+    orderBy: { startTime: "asc" },
+    take: 25,
   });
-
-  const bookingByKey = new Map<string, (typeof bookings)[number]>();
-  for (const b of bookings) {
-    bookingByKey.set(`${b.spotId}_${toDateKey(b.date)}`, b);
-  }
-
-  const dateList = Array.from({ length: days }, (_, i) => addDays(start, i));
 
   return (
     <main>
@@ -76,163 +59,128 @@ export default async function BookPage({
         </form>
       </div>
 
-      {feil === "opptatt" && (
-        <div className="mt-4 rounded border border-clay bg-clay-light px-4 py-2 text-sm text-clay">
-          Beklager, den plassen ble akkurat booket av noen andre. Velg en
-          annen dato eller plass.
-        </div>
-      )}
-
-      {settings && (
-        <div className="mt-4 rounded border border-border bg-surface px-4 py-3 text-sm">
-          <p>
-            <span className="font-medium">{settings.pricePerDay},-</span> kr
-            per døgn. Vipps til{" "}
-            <span className="font-medium">{settings.vippsNumber}</span> —
-            merk betalingen med leilighetsnummer.
-          </p>
-        </div>
-      )}
-
-      {spots.length === 0 ? (
-        <p className="mt-6 text-sm text-muted">
-          Ingen parkeringsplasser er lagt inn ennå. Be styret legge dem inn.
+      <div className="card mt-6">
+        <h2 className="font-medium">1. Velg tidsrom</h2>
+        <p className="mt-1 text-sm text-muted">
+          Du kan booke inntil {toDateKey(maxBookableDate())
+            .split("-")
+            .reverse()
+            .join(".")} fram i tid. Start og slutt må være på hele timer.
         </p>
-      ) : (
-        <div className="mt-6 overflow-x-auto rounded border border-border">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="bg-ink text-white">
-                <th className="sticky left-0 z-10 bg-ink px-3 py-2 text-left font-medium">
-                  Dato
-                </th>
-                {spots.map((s) => (
-                  <th
-                    key={s.id}
-                    className="whitespace-nowrap px-3 py-2 text-left font-medium"
-                  >
-                    {s.name}
-                  </th>
+        <form action="/book/ledige" method="get" className="mt-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="start_dato" className="label">
+                Fra dato
+              </label>
+              <input
+                type="date"
+                id="start_dato"
+                name="start_dato"
+                min={minDate}
+                max={maxDate}
+                defaultValue={minDate}
+                required
+                className="field"
+              />
+            </div>
+            <div>
+              <label htmlFor="start_time" className="label">
+                Fra kl.
+              </label>
+              <select
+                id="start_time"
+                name="start_time"
+                defaultValue="8"
+                required
+                className="field"
+              >
+                {HOURS.map((h) => (
+                  <option key={h} value={h}>
+                    {String(h).padStart(2, "0")}:00
+                  </option>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {dateList.map((date, i) => {
-                const key = toDateKey(date);
-                const showMonthHeader =
-                  i === 0 ||
-                  formatMonthLabel(date) !== formatMonthLabel(dateList[i - 1]);
-                const weekend = isWeekend(date);
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label htmlFor="slutt_dato" className="label">
+                Til dato
+              </label>
+              <input
+                type="date"
+                id="slutt_dato"
+                name="slutt_dato"
+                min={minDate}
+                max={maxDate}
+                defaultValue={minDate}
+                required
+                className="field"
+              />
+            </div>
+            <div>
+              <label htmlFor="slutt_time" className="label">
+                Til kl.
+              </label>
+              <select
+                id="slutt_time"
+                name="slutt_time"
+                defaultValue="18"
+                required
+                className="field"
+              >
+                {HOURS.map((h) => (
+                  <option key={h} value={h}>
+                    {String(h).padStart(2, "0")}:00
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <button type="submit" className="btn-primary w-full">
+            Se ledige plasser
+          </button>
+        </form>
+      </div>
 
-                return (
-                  <RowGroup
-                    key={key}
-                    showMonthHeader={showMonthHeader}
-                    monthLabel={formatMonthLabel(date)}
-                    colSpan={spots.length + 1}
-                  >
-                    <tr className={weekend ? "bg-paper" : "bg-surface"}>
-                      <td
-                        className={`sticky left-0 z-10 whitespace-nowrap px-3 py-2 ${
-                          weekend ? "bg-paper" : "bg-surface"
-                        }`}
-                      >
-                        <span className="text-muted">
-                          {formatWeekday(date)}
-                        </span>{" "}
-                        {formatDayMonth(date)}
-                      </td>
-                      {spots.map((spot) => {
-                        const booking = bookingByKey.get(`${spot.id}_${key}`);
-                        return (
-                          <td key={spot.id} className="px-3 py-2">
-                            {!booking ? (
-                              <form action={bookSpot}>
-                                <input
-                                  type="hidden"
-                                  name="spotId"
-                                  value={spot.id}
-                                />
-                                <input type="hidden" name="date" value={key} />
-                                <button type="submit" className="btn-primary">
-                                  Book
-                                </button>
-                              </form>
-                            ) : booking.apartmentId === apartment.id ? (
-                              <form
-                                action={cancelBooking}
-                                className="flex items-center gap-2"
-                              >
-                                <span className="rounded bg-pine-light px-2 py-1 text-xs font-medium text-pine-dark">
-                                  Din booking
-                                </span>
-                                <input
-                                  type="hidden"
-                                  name="bookingId"
-                                  value={booking.id}
-                                />
-                                <button
-                                  type="submit"
-                                  className="text-xs text-clay underline"
-                                >
-                                  Avbestill
-                                </button>
-                              </form>
-                            ) : (
-                              <span className="rounded bg-booked px-2 py-1 text-xs text-muted">
-                                Leil. {booking.apartment.number}
-                              </span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  </RowGroup>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {days < 120 && (
-        <p className="mt-4 text-sm">
-          <a
-            href={`/book?dager=${Math.min(days + 45, 120)}`}
-            className="text-pine underline"
-          >
-            Vis flere dager
-          </a>
+      <section className="card mt-6">
+        <h2 className="font-medium">Dine bookinger</h2>
+        <ul className="mt-3 divide-y divide-border">
+          {myBookings.map((b) => (
+            <li key={b.id} className="py-2.5 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <span className="font-medium">{b.spot.name}</span>{" "}
+                  <span className="text-muted">
+                    {formatDateTime(b.startTime)} – {formatDateTime(b.endTime)}
+                  </span>
+                  <div className="mt-0.5 text-xs text-muted">
+                    {b.priceKr},- kr ·{" "}
+                    {b.status === "CONFIRMED" ? "Betalt og bekreftet" : "Venter på betaling"}
+                  </div>
+                </div>
+                {b.status === "PENDING" && (
+                  <form action={cancelPendingBooking}>
+                    <input type="hidden" name="bookingId" value={b.id} />
+                    <button type="submit" className="text-xs text-clay underline whitespace-nowrap">
+                      Avbryt
+                    </button>
+                  </form>
+                )}
+              </div>
+            </li>
+          ))}
+          {myBookings.length === 0 && (
+            <li className="py-2 text-sm text-muted">
+              Ingen kommende bookinger.
+            </li>
+          )}
+        </ul>
+        <p className="mt-3 text-xs text-muted">
+          Vil du avbestille en betalt booking? Ta kontakt med styret.
         </p>
-      )}
+      </section>
     </main>
-  );
-}
-
-function RowGroup({
-  children,
-  showMonthHeader,
-  monthLabel,
-  colSpan,
-}: {
-  children: React.ReactNode;
-  showMonthHeader: boolean;
-  monthLabel: string;
-  colSpan: number;
-}) {
-  return (
-    <>
-      {showMonthHeader && (
-        <tr>
-          <td
-            colSpan={colSpan}
-            className="border-t border-border bg-paper px-3 py-1.5 text-sm font-semibold text-ink"
-          >
-            {monthLabel}
-          </td>
-        </tr>
-      )}
-      {children}
-    </>
   );
 }

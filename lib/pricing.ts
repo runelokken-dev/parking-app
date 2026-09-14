@@ -9,15 +9,19 @@ export type PriceSettings = {
 export type PriceBreakdown = {
   hours: number;
   totalKr: number;
-  basis: "hourly" | "daily";
-  days?: number; // kun satt når basis er "daily"
+  days: number; // antall hele/påbegynte døgn priset til døgnpris
+  extraHours: number; // resterende timer priset per time (0 hvis ingen)
 };
 
 /**
- * Prisregel:
- * - Under terskelen (standard 5 timer): pris per time.
- * - Fra og med terskelen: påbegynte døgn à døgnpris
- *   (f.eks. 30 timer = 2 påbegynte døgn).
+ * Prisregel, brukt om igjen for hver påbegynte dag i bookingen:
+ * - Under terskelen (standard 5 timer) inn i en (ny) dag: pris per time
+ *   for de timene.
+ * - Fra og med terskelen inn i en dag: hele dagen prises til døgnpris.
+ *
+ * Eksempel med default-priser (20 kr/t, 100 kr/døgn, terskel 5t):
+ * 1 døgn + 2 timer = 100 + 2*20 = 140 kr (ikke 2*100 = 200 kr).
+ * 1 døgn + 6 timer = 100 + 100 = 200 kr (6 timer inn i dag 2 ≥ terskel).
  */
 export function calculatePrice(
   start: Date,
@@ -25,20 +29,20 @@ export function calculatePrice(
   settings: PriceSettings
 ): PriceBreakdown {
   const hours = durationHours(start, end);
+  const fullDays = Math.floor(hours / 24);
+  const remainder = hours - fullDays * 24;
 
-  if (hours < settings.dailyThresholdHours) {
-    return {
-      hours,
-      totalKr: Math.round(hours * settings.pricePerHour),
-      basis: "hourly",
-    };
+  let days = fullDays;
+  let extraHours = 0;
+
+  if (remainder >= settings.dailyThresholdHours) {
+    days += 1;
+  } else if (remainder > 0) {
+    extraHours = remainder;
   }
 
-  const days = Math.ceil(hours / 24);
-  return {
-    hours,
-    totalKr: days * settings.pricePerDay,
-    basis: "daily",
-    days,
-  };
+  const totalKr =
+    days * settings.pricePerDay + Math.round(extraHours * settings.pricePerHour);
+
+  return { hours, totalKr, days, extraHours };
 }

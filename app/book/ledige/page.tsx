@@ -113,10 +113,26 @@ export default async function LedigePlasserPage({
         <div className="mt-4 rounded border border-border bg-surface px-4 py-3 text-sm">
           <p>
             Pris: <span className="font-medium">{price.totalKr},-</span> kr
-            {price.basis === "hourly" ? (
-              <> ({price.hours.toFixed(0)} timer à {settings?.pricePerHour ?? 20},- kr/t)</>
-            ) : (
-              <> ({price.days} påbegynt{price.days === 1 ? "" : "e"} døgn à {settings?.pricePerDay ?? 100},- kr)</>
+            {price.days > 0 && price.extraHours > 0 && (
+              <>
+                {" "}
+                ({price.days} påbegynt{price.days === 1 ? "" : "e"} døgn à{" "}
+                {settings?.pricePerDay ?? 100},- kr + {price.extraHours.toFixed(0)}{" "}
+                timer à {settings?.pricePerHour ?? 20},- kr/t)
+              </>
+            )}
+            {price.days > 0 && price.extraHours === 0 && (
+              <>
+                {" "}
+                ({price.days} påbegynt{price.days === 1 ? "" : "e"} døgn à{" "}
+                {settings?.pricePerDay ?? 100},- kr)
+              </>
+            )}
+            {price.days === 0 && (
+              <>
+                {" "}
+                ({price.hours.toFixed(0)} timer à {settings?.pricePerHour ?? 20},- kr/t)
+              </>
             )}
           </p>
         </div>

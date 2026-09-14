@@ -5,6 +5,7 @@ import { switchApartment } from "@/app/actions";
 import { cancelPendingBooking } from "@/app/book/actions";
 import { reapExpiredPending } from "@/lib/availability";
 import {
+  addDays,
   formatDateTime,
   maxBookableDate,
   todayUtcMidnight,
@@ -28,6 +29,7 @@ export default async function BookPage() {
 
   const minDate = toDateKey(todayUtcMidnight());
   const maxDate = toDateKey(maxBookableDate());
+  const tomorrowDate = toDateKey(addDays(todayUtcMidnight(), 1));
 
   const myBookings = await prisma.booking.findMany({
     where: {
@@ -91,7 +93,7 @@ export default async function BookPage() {
               <select
                 id="start_time"
                 name="start_time"
-                defaultValue="8"
+                defaultValue="12"
                 required
                 className="field"
               >
@@ -114,7 +116,7 @@ export default async function BookPage() {
                 name="slutt_dato"
                 min={minDate}
                 max={maxDate}
-                defaultValue={minDate}
+                defaultValue={tomorrowDate}
                 required
                 className="field"
               />
@@ -126,7 +128,7 @@ export default async function BookPage() {
               <select
                 id="slutt_time"
                 name="slutt_time"
-                defaultValue="18"
+                defaultValue="12"
                 required
                 className="field"
               >

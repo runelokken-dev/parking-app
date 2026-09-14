@@ -39,6 +39,11 @@
     appearance: none;
     text-align: left;
   }
+  /* Safari/iOS rendrer selve datoteksten i en intern pseudo-element som
+     ikke arver text-align fra input-elementet direkte — må settes her. */
+  input[type="date"].field::-webkit-date-and-time-value {
+    text-align: left;
+  }
   .label {
     @apply mb-1 block text-sm font-medium text-ink;
   }

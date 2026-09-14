@@ -94,6 +94,9 @@ export default async function AdminPage({
     }),
   ]);
 
+  const confirmedInPeriod = bookings.filter((b) => b.status === "CONFIRMED");
+  const totalRevenue = confirmedInPeriod.reduce((sum, b) => sum + b.priceKr, 0);
+
   return (
     <main>
       <div className="flex items-center justify-between">
@@ -288,6 +291,14 @@ export default async function AdminPage({
           </button>
         </form>
 
+        <div className="mt-4 rounded border border-border bg-paper px-4 py-3 text-sm">
+          <span className="text-muted">Leieinntekter i valgt periode</span>{" "}
+          <span className="font-semibold">{totalRevenue},- kr</span>{" "}
+          <span className="text-muted">
+            ({confirmedInPeriod.length} betalt{confirmedInPeriod.length === 1 ? "" : "e"} booking{confirmedInPeriod.length === 1 ? "" : "er"})
+          </span>
+        </div>
+
         <ul className="mt-4 max-h-[32rem] divide-y divide-border overflow-y-auto">
           {bookings.map((b) => (
             <li key={b.id} className="py-2.5 text-sm">
@@ -321,7 +332,8 @@ export default async function AdminPage({
         </ul>
         {bookings.length === 300 && (
           <p className="mt-2 text-xs text-muted">
-            Viser de første 300 — snevre inn datofilteret for å se alle.
+            Viser de første 300 — snevre inn datofilteret for å se alle
+            (summen over dekker kun de viste).
           </p>
         )}
         <p className="mt-3 text-xs text-muted">

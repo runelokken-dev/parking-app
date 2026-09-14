@@ -68,7 +68,7 @@ export default async function BookPage() {
             .join(".")} fram i tid. Start og slutt må være på hele timer.
         </p>
         <form action="/book/ledige" method="get" className="mt-4 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label htmlFor="start_dato" className="label">
                 Fra dato
@@ -103,7 +103,7 @@ export default async function BookPage() {
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <label htmlFor="slutt_dato" className="label">
                 Til dato

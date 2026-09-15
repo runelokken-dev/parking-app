@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getApartmentId } from "@/lib/session";
 import { selectApartment } from "@/app/actions";
+import { VilkarFooter } from "@/components/VilkarFooter";
 
 export default async function HomePage() {
   const existingId = getApartmentId();
@@ -13,9 +14,10 @@ export default async function HomePage() {
     if (existing) redirect("/book");
   }
 
-  const apartments = await prisma.apartment.findMany({
-    orderBy: { number: "asc" },
-  });
+  const [apartments, settings] = await Promise.all([
+    prisma.apartment.findMany({ orderBy: { number: "asc" } }),
+    prisma.settings.findUnique({ where: { id: 1 } }),
+  ]);
 
   return (
     <main>
@@ -74,6 +76,12 @@ export default async function HomePage() {
           Logg inn som styret
         </Link>
       </p>
+
+      <VilkarFooter
+        pricePerHour={settings?.pricePerHour ?? 20}
+        pricePerDay={settings?.pricePerDay ?? 100}
+        dailyThresholdHours={settings?.dailyThresholdHours ?? 5}
+      />
     </main>
   );
 }

@@ -86,7 +86,8 @@ export async function reserveSpot(formData: FormData) {
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable }
     );
     bookingId = booking.id;
-  } catch {
+  } catch (err) {
+    console.error("[reserveSpot] Reservasjon feilet:", err);
     redirect(ledigeUrl(start, end, "opptatt"));
   }
 
@@ -98,7 +99,8 @@ export async function reserveSpot(formData: FormData) {
       description: `${spot.name}, ${start.toLocaleString("nb-NO")}`,
     });
     redirectUrl = payment.redirectUrl;
-  } catch {
+  } catch (err) {
+    console.error("[reserveSpot] Opprettelse av Vipps-betaling feilet:", err);
     await prisma.booking.update({
       where: { id: bookingId },
       data: { status: "CANCELLED" },

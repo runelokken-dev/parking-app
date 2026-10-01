@@ -46,6 +46,19 @@ function commonHeaders(extra: Record<string, string> = {}) {
   };
 }
 
+async function logAndThrow(context: string, res: Response): Promise<never> {
+  let body = "";
+  try {
+    body = await res.text();
+  } catch {
+    // ignorer — vi har uansett status-koden
+  }
+  console.error(
+    `[vipps] ${context} feilet: ${res.status} ${res.statusText}\n${body}`
+  );
+  throw new Error(`${context} feilet (${res.status})`);
+}
+
 async function getAccessToken(): Promise<string> {
   const res = await fetch(`${vippsBaseUrl()}/accesstoken/get`, {
     method: "POST",
@@ -55,7 +68,7 @@ async function getAccessToken(): Promise<string> {
     }),
   });
   if (!res.ok) {
-    throw new Error(`Klarte ikke hente Vipps-token (${res.status})`);
+    await logAndThrow("Henting av Vipps-token", res);
   }
   const data = await res.json();
   return data.access_token as string;
@@ -92,7 +105,7 @@ export async function createPayment(input: {
   });
 
   if (!res.ok) {
-    throw new Error(`Klarte ikke opprette Vipps-betaling (${res.status})`);
+    await logAndThrow("Opprettelse av Vipps-betaling", res);
   }
   const data = await res.json();
   return { redirectUrl: data.redirectUrl as string };
@@ -112,7 +125,14 @@ export async function getPaymentState(reference: string): Promise<PaymentState> 
       headers: commonHeaders({ Authorization: `Bearer ${token}` }),
     }
   );
-  if (!res.ok) return "UNKNOWN";
+  if (!res.ok) {
+    console.error(
+      `[vipps] Henting av betalingsstatus feilet: ${res.status} ${await res
+        .text()
+        .catch(() => "")}`
+    );
+    return "UNKNOWN";
+  }
   const data = await res.json();
   return (data.state as PaymentState) ?? "UNKNOWN";
 }
@@ -142,6 +162,6 @@ export async function capturePayment(
     }
   );
   if (!res.ok) {
-    throw new Error(`Klarte ikke fange opp Vipps-betaling (${res.status})`);
+    await logAndThrow("Fangst av Vipps-betaling", res);
   }
 }

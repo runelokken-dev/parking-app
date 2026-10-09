@@ -46,16 +46,11 @@ export default async function BookPage() {
 
   return (
     <main>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Parkering
-          </h1>
-          <p className="mt-1 text-sm text-muted">
-            Leil. {apartment.number}
-            {apartment.andelsnummer ? ` · Andel ${apartment.andelsnummer}` : ""}
-          </p>
-        </div>
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-sm text-muted">
+          Leil. {apartment.number}
+          {apartment.andelsnummer ? ` · Andel ${apartment.andelsnummer}` : ""}
+        </p>
         <form action={switchApartment}>
           <button type="submit" className="btn-secondary">
             Bytt leilighet

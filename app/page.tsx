@@ -21,10 +21,7 @@ export default async function HomePage() {
 
   return (
     <main>
-      <h1 className="text-2xl font-semibold tracking-tight">
-        Parkering i borettslaget
-      </h1>
-      <p className="mt-2 text-sm text-muted">
+      <p className="text-sm text-muted">
         Velg leiligheten din for å se ledige plasser og booke.
       </p>
 

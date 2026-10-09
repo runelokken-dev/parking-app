@@ -13,9 +13,9 @@ export default async function MockVippsPage({
   if (isVippsConfigured()) {
     return (
       <main>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h2 className="text-xl font-semibold tracking-tight">
           Test-Vipps er ikke i bruk
-        </h1>
+        </h2>
         <p className="mt-2 text-sm text-muted">
           Denne appen er koblet til ekte Vipps-betaling, så denne test-siden
           brukes ikke lenger.
@@ -32,9 +32,9 @@ export default async function MockVippsPage({
   if (!booking || booking.status !== "PENDING") {
     return (
       <main>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <h2 className="text-xl font-semibold tracking-tight">
           Fant ikke betalingen
-        </h1>
+        </h2>
         <p className="mt-2 text-sm text-muted">
           Denne reservasjonen finnes ikke lenger, eller er allerede
           behandlet.
@@ -49,7 +49,7 @@ export default async function MockVippsPage({
         <div className="mx-auto mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-pine-light text-sm font-bold text-pine-dark">
           V
         </div>
-        <h1 className="text-lg font-semibold">Simulert Vipps-betaling</h1>
+        <h2 className="text-lg font-semibold">Simulert Vipps-betaling</h2>
         <p className="mt-1 text-xs text-muted">
           Test-modus — ingen ekte penger trekkes
         </p>

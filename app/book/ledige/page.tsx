@@ -73,105 +73,106 @@ export default async function LedigePlasserPage({
           ← Endre tidsrom
         </Link>
       </p>
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight">
-        2. Velg parkeringsplass
-      </h1>
-      <p className="mt-1 text-sm text-muted">
-        {formatDateTime(start)} – {formatDateTime(end)}
-      </p>
 
-      {feil === "opptatt" && (
-        <div className="mt-4 rounded border border-clay bg-clay-light px-4 py-2 text-sm text-clay">
-          Beklager, den plassen ble akkurat reservert av noen andre. Velg en
-          annen plass under.
-        </div>
-      )}
-      {feil === "betalingsfeil" && (
-        <div className="mt-4 rounded border border-clay bg-clay-light px-4 py-2 text-sm text-clay">
-          Noe gikk galt med betalingen. Reservasjonen ble avbrutt — prøv
-          igjen.
-        </div>
-      )}
+      <div className="card mt-4">
+        <h2 className="font-medium">2. Velg parkeringsplass</h2>
+        <p className="mt-1 text-sm text-muted">
+          {formatDateTime(start)} – {formatDateTime(end)}
+        </p>
 
-      {invalidRange && (
-        <p className="mt-4 rounded border border-clay bg-clay-light px-4 py-2 text-sm text-clay">
-          Sluttidspunktet må være etter starttidspunktet.
-        </p>
-      )}
-      {inPast && !invalidRange && (
-        <p className="mt-4 rounded border border-clay bg-clay-light px-4 py-2 text-sm text-clay">
-          Du kan ikke booke et tidsrom som allerede er passert.
-        </p>
-      )}
-      {tooFarAhead && !invalidRange && (
-        <p className="mt-4 rounded border border-clay bg-clay-light px-4 py-2 text-sm text-clay">
-          Du kan ikke booke så langt fram i tid ennå.
-        </p>
-      )}
+        {feil === "opptatt" && (
+          <div className="mt-4 rounded border border-clay bg-clay-light px-4 py-2 text-sm text-clay">
+            Beklager, den plassen ble akkurat reservert av noen andre. Velg en
+            annen plass under.
+          </div>
+        )}
+        {feil === "betalingsfeil" && (
+          <div className="mt-4 rounded border border-clay bg-clay-light px-4 py-2 text-sm text-clay">
+            Noe gikk galt med betalingen. Reservasjonen ble avbrutt — prøv
+            igjen.
+          </div>
+        )}
 
-      {price && (
-        <div className="mt-4 rounded border border-border bg-surface px-4 py-3 text-sm">
-          <p>
-            Pris: <span className="font-medium">{price.totalKr},-</span> kr
-            {price.days > 0 && price.extraHours > 0 && (
-              <>
-                {" "}
-                ({price.days} påbegynt{price.days === 1 ? "" : "e"} døgn à{" "}
-                {settings?.pricePerDay ?? 100},- kr + {price.extraHours.toFixed(0)}{" "}
-                timer à {settings?.pricePerHour ?? 20},- kr/t)
-              </>
-            )}
-            {price.days > 0 && price.extraHours === 0 && (
-              <>
-                {" "}
-                ({price.days} påbegynt{price.days === 1 ? "" : "e"} døgn à{" "}
-                {settings?.pricePerDay ?? 100},- kr)
-              </>
-            )}
-            {price.days === 0 && (
-              <>
-                {" "}
-                ({price.hours.toFixed(0)} timer à {settings?.pricePerHour ?? 20},- kr/t)
-              </>
-            )}
+        {invalidRange && (
+          <p className="mt-4 rounded border border-clay bg-clay-light px-4 py-2 text-sm text-clay">
+            Sluttidspunktet må være etter starttidspunktet.
           </p>
-        </div>
-      )}
+        )}
+        {inPast && !invalidRange && (
+          <p className="mt-4 rounded border border-clay bg-clay-light px-4 py-2 text-sm text-clay">
+            Du kan ikke booke et tidsrom som allerede er passert.
+          </p>
+        )}
+        {tooFarAhead && !invalidRange && (
+          <p className="mt-4 rounded border border-clay bg-clay-light px-4 py-2 text-sm text-clay">
+            Du kan ikke booke så langt fram i tid ennå.
+          </p>
+        )}
 
-      {!invalidRange && !inPast && !tooFarAhead && (
-        <ul className="mt-6 divide-y divide-border rounded border border-border">
-          {availability.map(({ spot, free }) => (
-            <li key={spot.id} className="flex items-center justify-between px-4 py-3">
-              <span className={free ? "" : "text-muted"}>{spot.name}</span>
-              {free ? (
-                <form action={reserveSpot}>
-                  <input type="hidden" name="spotId" value={spot.id} />
-                  <input type="hidden" name="start" value={start.toISOString()} />
-                  <input type="hidden" name="end" value={end.toISOString()} />
-                  <button type="submit" className="btn-primary">
-                    Velg og betal
-                  </button>
-                </form>
-              ) : (
-                <span className="rounded bg-booked px-2 py-1 text-xs text-muted">
-                  Opptatt
-                </span>
+        {price && (
+          <div className="mt-4 rounded border border-border bg-paper px-4 py-3 text-sm">
+            <p>
+              Pris: <span className="font-medium">{price.totalKr},-</span> kr
+              {price.days > 0 && price.extraHours > 0 && (
+                <>
+                  {" "}
+                  ({price.days} påbegynt{price.days === 1 ? "" : "e"} døgn à{" "}
+                  {settings?.pricePerDay ?? 100},- kr + {price.extraHours.toFixed(0)}{" "}
+                  timer à {settings?.pricePerHour ?? 20},- kr/t)
+                </>
               )}
-            </li>
-          ))}
-          {availability.length === 0 && (
-            <li className="px-4 py-3 text-sm text-muted">
-              Ingen parkeringsplasser er lagt inn ennå.
-            </li>
-          )}
-        </ul>
-      )}
+              {price.days > 0 && price.extraHours === 0 && (
+                <>
+                  {" "}
+                  ({price.days} påbegynt{price.days === 1 ? "" : "e"} døgn à{" "}
+                  {settings?.pricePerDay ?? 100},- kr)
+                </>
+              )}
+              {price.days === 0 && (
+                <>
+                  {" "}
+                  ({price.hours.toFixed(0)} timer à {settings?.pricePerHour ?? 20},- kr/t)
+                </>
+              )}
+            </p>
+          </div>
+        )}
 
-      <p className="mt-4 text-xs text-muted">
-        <Link href={`/book/ledige?${qs}`} className="underline">
-          Oppdater ledighet
-        </Link>
-      </p>
+        {!invalidRange && !inPast && !tooFarAhead && (
+          <ul className="mt-4 divide-y divide-border rounded border border-border">
+            {availability.map(({ spot, free }) => (
+              <li key={spot.id} className="flex items-center justify-between px-4 py-3">
+                <span className={free ? "" : "text-muted"}>{spot.name}</span>
+                {free ? (
+                  <form action={reserveSpot}>
+                    <input type="hidden" name="spotId" value={spot.id} />
+                    <input type="hidden" name="start" value={start.toISOString()} />
+                    <input type="hidden" name="end" value={end.toISOString()} />
+                    <button type="submit" className="btn-primary">
+                      Velg og betal
+                    </button>
+                  </form>
+                ) : (
+                  <span className="rounded bg-booked px-2 py-1 text-xs text-muted">
+                    Opptatt
+                  </span>
+                )}
+              </li>
+            ))}
+            {availability.length === 0 && (
+              <li className="px-4 py-3 text-sm text-muted">
+                Ingen parkeringsplasser er lagt inn ennå.
+              </li>
+            )}
+          </ul>
+        )}
+
+        <p className="mt-4 text-xs text-muted">
+          <Link href={`/book/ledige?${qs}`} className="underline">
+            Oppdater ledighet
+          </Link>
+        </p>
+      </div>
     </main>
   );
 }

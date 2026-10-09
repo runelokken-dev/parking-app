@@ -15,9 +15,9 @@ export default async function VilkarPage() {
           ← Tilbake til booking
         </Link>
       </p>
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight">
+      <h2 className="mt-2 text-xl font-semibold tracking-tight">
         Vilkår for booking og betaling
-      </h1>
+      </h2>
       <p className="mt-1 text-sm text-muted">
         {FIRMA.navn} · Org.nr {FIRMA.orgnr} · {FIRMA.adresse} · {FIRMA.epost}
       </p>

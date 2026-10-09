@@ -40,7 +40,7 @@ export default async function AdminPage({
   if (!isAdmin()) {
     return (
       <main>
-        <h1 className="text-2xl font-semibold tracking-tight">Styret</h1>
+        <h2 className="text-xl font-semibold tracking-tight">Styret</h2>
         <p className="mt-2 text-sm text-muted">
           Logg inn for å administrere plasser, leiligheter og bookinger.
         </p>
@@ -100,7 +100,7 @@ export default async function AdminPage({
   return (
     <main>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Styret</h1>
+        <h2 className="text-xl font-semibold tracking-tight">Styret</h2>
         <form action={adminLogout}>
           <button type="submit" className="btn-secondary">
             Logg ut

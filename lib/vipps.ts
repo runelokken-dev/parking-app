@@ -13,9 +13,13 @@ import { getBaseUrl } from "@/lib/url";
  * Referanse: https://developer.vippsmobilepay.com/docs/APIs/epayment-api/
  */
 
+// Tilstander i Vipps ePayment API. ABORTED = brukeren avbrøt selv,
+// EXPIRED = brukeren svarte ikke i tide, TERMINATED = vi avbrøt (cancel).
+// CANCELLED beholdes for sikkerhets skyld (brukes i webhook-hendelser).
 export type PaymentState =
   | "CREATED"
   | "AUTHORIZED"
+  | "ABORTED"
   | "CANCELLED"
   | "EXPIRED"
   | "TERMINATED"

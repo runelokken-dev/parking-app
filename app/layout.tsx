@@ -11,6 +11,7 @@ const publicSans = Public_Sans({
 export const metadata: Metadata = {
   title: "Parkering i Borettslaget Lille Rosenlund",
   description: "Book ledige gjesteparkeringsplasser i Borettslaget Lille Rosenlund",
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({

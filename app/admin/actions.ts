@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { addDays, parseDateKey } from "@/lib/dates";
 import { prisma } from "@/lib/prisma";
 import { clearAdmin, isAdmin, setAdmin } from "@/lib/session";
 
@@ -112,6 +113,34 @@ export async function cancelBookingAsAdmin(formData: FormData) {
     data: { status: "CANCELLED" },
   });
   revalidatePath("/admin");
+}
+
+// Sletter én booking permanent (fjernes også fra historikk og inntektssum).
+export async function deleteBooking(formData: FormData) {
+  requireAdmin();
+  const id = String(formData.get("id") || "");
+  if (!id) return;
+  await prisma.booking.deleteMany({ where: { id } });
+  revalidatePath("/admin");
+  revalidatePath("/book");
+}
+
+// Sletter ALLE bookinger i valgt periode (fra/til, inkludert begge dager).
+// Krever at brukeren har skrevet SLETT som bekreftelse.
+export async function deleteBookingsInPeriod(formData: FormData) {
+  requireAdmin();
+  const fra = String(formData.get("fra") || "");
+  const til = String(formData.get("til") || "");
+  const confirm = String(formData.get("confirm") || "").trim().toUpperCase();
+  const dateKey = /^\d{4}-\d{2}-\d{2}$/;
+  if (confirm !== "SLETT" || !dateKey.test(fra) || !dateKey.test(til)) return;
+  await prisma.booking.deleteMany({
+    where: {
+      startTime: { gte: parseDateKey(fra), lt: addDays(parseDateKey(til), 1) },
+    },
+  });
+  revalidatePath("/admin");
+  revalidatePath("/book");
 }
 
 export async function updateSettings(formData: FormData) {

@@ -10,6 +10,8 @@ import {
   adminLogin,
   adminLogout,
   cancelBookingAsAdmin,
+  deleteBooking,
+  deleteBookingsInPeriod,
   deleteApartment,
   deleteSpot,
   toggleSpot,
@@ -322,6 +324,21 @@ export default async function AdminPage({
                       </button>
                     </form>
                   )}
+                  <details className="relative">
+                    <summary className="cursor-pointer text-xs text-clay underline">
+                      Slett
+                    </summary>
+                    <form
+                      action={deleteBooking}
+                      className="absolute right-0 z-10 mt-1 w-48 rounded border border-border bg-white p-2 text-xs shadow"
+                    >
+                      <input type="hidden" name="id" value={b.id} />
+                      <p className="mb-2">Slette denne bookingen for godt?</p>
+                      <button type="submit" className="text-clay underline">
+                        Ja, slett
+                      </button>
+                    </form>
+                  </details>
                 </div>
               </div>
             </li>
@@ -340,6 +357,35 @@ export default async function AdminPage({
           Avbestilling av en allerede betalt booking refunderer ikke
           automatisk — gjør det manuelt i Vipps-appen ved behov.
         </p>
+
+        <details className="mt-4 rounded border border-border px-4 py-3 text-sm">
+          <summary className="cursor-pointer text-clay">
+            Slett alle bookinger i valgt periode
+          </summary>
+          <form action={deleteBookingsInPeriod} className="mt-3 space-y-3">
+            <input type="hidden" name="fra" value={fra} />
+            <input type="hidden" name="til" value={til} />
+            <p className="text-xs text-muted">
+              Sletter alle bookinger med start mellom {fra} og {til}
+              ({bookings.length} vist nå), også betalte. Dette kan ikke
+              angres, og pengene refunderes ikke. Bookingene forsvinner også
+              fra leieinntektene.
+            </p>
+            <label htmlFor="confirm" className="label">
+              Skriv SLETT for å bekrefte
+            </label>
+            <input
+              id="confirm"
+              name="confirm"
+              required
+              autoComplete="off"
+              className="field"
+            />
+            <button type="submit" className="btn-secondary text-clay">
+              Slett bookinger
+            </button>
+          </form>
+        </details>
       </section>
     </main>
   );

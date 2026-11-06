@@ -8,7 +8,7 @@ import { getApartmentId } from "@/lib/session";
 import { reapExpiredPending, PENDING_HOLD_MINUTES } from "@/lib/availability";
 import { calculatePrice } from "@/lib/pricing";
 import { createPayment } from "@/lib/vipps";
-import { toDateKey } from "@/lib/dates";
+import { currentHourOslo, toDateKey } from "@/lib/dates";
 
 function ledigeUrl(start: Date, end: Date, feil?: string) {
   const qs = new URLSearchParams({
@@ -35,6 +35,8 @@ export async function reserveSpot(formData: FormData) {
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
     redirect("/book");
   }
+
+  if (start < currentHourOslo()) redirect("/book");
 
   await reapExpiredPending();
 

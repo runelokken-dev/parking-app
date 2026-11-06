@@ -6,6 +6,7 @@ import { reapExpiredPending, isSpotFree } from "@/lib/availability";
 import { calculatePrice } from "@/lib/pricing";
 import {
   combineDateAndHour,
+  currentHourOslo,
   formatDateTime,
   maxBookableDate,
 } from "@/lib/dates";
@@ -34,9 +35,9 @@ export default async function LedigePlasserPage({
   const start = combineDateAndHour(startDato, startTime);
   const end = combineDateAndHour(sluttDato, sluttTime);
 
-  const now = new Date();
+  const now = currentHourOslo();
   const invalidRange = end <= start;
-  const inPast = start < now;
+  const inPast = start < now; // start i inneværende time er tillatt
   const tooFarAhead = start > maxBookableDate();
 
   await reapExpiredPending();

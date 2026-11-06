@@ -2,12 +2,40 @@
 
 export function utcMidnight(date: Date): Date {
   return new Date(
-    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+  );
+}
+
+// Appen lagrer klokkeslett som "veggklokke" (norsk tid, lagret som UTC).
+// Serveren (Vercel) kjører i UTC, så "nå" må regnes om til norsk tid.
+const osloPartsFormatter = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Europe/Oslo",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  hourCycle: "h23",
+});
+
+// Nåværende tidspunkt i norsk tid, avrundet ned til hel time,
+// representert som en UTC-dato (samme format som bookingene).
+export function currentHourOslo(): Date {
+  const parts: Record<string, string> = {};
+  for (const p of osloPartsFormatter.formatToParts(new Date())) {
+    parts[p.type] = p.value;
+  }
+  return new Date(
+    Date.UTC(
+      Number(parts.year),
+      Number(parts.month) - 1,
+      Number(parts.day),
+      Number(parts.hour)
+    )
   );
 }
 
 export function todayUtcMidnight(): Date {
-  return utcMidnight(new Date());
+  return utcMidnight(currentHourOslo());
 }
 
 export function addDays(date: Date, days: number): Date {

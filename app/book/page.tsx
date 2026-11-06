@@ -8,6 +8,7 @@ import { reapExpiredPending } from "@/lib/availability";
 import { FIRMA } from "@/lib/firma";
 import {
   addDays,
+  currentHourOslo,
   formatDateTime,
   maxBookableDate,
   todayUtcMidnight,
@@ -32,12 +33,14 @@ export default async function BookPage() {
   const minDate = toDateKey(todayUtcMidnight());
   const maxDate = toDateKey(maxBookableDate());
   const tomorrowDate = toDateKey(addDays(todayUtcMidnight(), 1));
+  const nowHour = currentHourOslo();
+  const defaultStartHour = String(nowHour.getUTCHours());
 
   const myBookings = await prisma.booking.findMany({
     where: {
       apartmentId,
       status: { in: ["PENDING", "CONFIRMED"] },
-      endTime: { gte: new Date() },
+      endTime: { gte: nowHour },
     },
     include: { spot: true },
     orderBy: { startTime: "asc" },
@@ -90,7 +93,7 @@ export default async function BookPage() {
               <select
                 id="start_time"
                 name="start_time"
-                defaultValue="12"
+                defaultValue={defaultStartHour}
                 required
                 className="field"
               >
@@ -125,7 +128,7 @@ export default async function BookPage() {
               <select
                 id="slutt_time"
                 name="slutt_time"
-                defaultValue="12"
+                defaultValue={defaultStartHour}
                 required
                 className="field"
               >

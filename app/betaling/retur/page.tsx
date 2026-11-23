@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import { formatDateTime } from "@/lib/dates";
-import { capturePayment, getPaymentState, isVippsConfigured } from "@/lib/vipps";
+import { syncPayment } from "@/lib/payments";
+import { AutoRefresh } from "@/components/AutoRefresh";
 
 export const dynamic = "force-dynamic";
 
@@ -12,12 +12,7 @@ export default async function BetalingReturPage({
 }) {
   const ref = String(searchParams.ref || "");
 
-  let booking = ref
-    ? await prisma.booking.findUnique({
-        where: { paymentRef: ref },
-        include: { spot: true, apartment: true },
-      })
-    : null;
+  const booking = ref ? await syncPayment(ref) : null;
 
   if (!booking) {
     return (
@@ -32,27 +27,6 @@ export default async function BetalingReturPage({
         </p>
       </main>
     );
-  }
-
-  // Ekte Vipps: sjekk status hos Vipps og oppdater bookingen tilsvarende.
-  if (booking.status === "PENDING" && isVippsConfigured()) {
-    const state = await getPaymentState(ref);
-    if (state === "AUTHORIZED") {
-      await capturePayment(ref, booking.priceKr);
-      booking = await prisma.booking.update({
-        where: { paymentRef: ref },
-        data: { status: "CONFIRMED", paidAt: new Date(), vippsState: state },
-        include: { spot: true, apartment: true },
-      });
-    } else if (
-      ["ABORTED", "CANCELLED", "EXPIRED", "TERMINATED"].includes(state)
-    ) {
-      booking = await prisma.booking.update({
-        where: { paymentRef: ref },
-        data: { status: "CANCELLED", vippsState: state },
-        include: { spot: true, apartment: true },
-      });
-    }
   }
 
   if (booking.status === "CONFIRMED") {
@@ -106,12 +80,18 @@ export default async function BetalingReturPage({
   // brukeren kommer tilbake fra WEB_REDIRECT, før status har rukket å bli satt.
   return (
     <main>
+      <AutoRefresh />
       <h2 className="text-xl font-semibold tracking-tight">
         Bekrefter betaling …
       </h2>
       <p className="mt-2 text-sm text-muted">
-        Dette tar vanligvis bare noen sekunder.
+        Dette tar vanligvis bare noen sekunder. Siden oppdaterer seg selv.
       </p>
+      {booking.vippsState && (
+        <p className="mt-1 text-xs text-muted">
+          Status hos Vipps: {booking.vippsState}
+        </p>
+      )}
       <p className="mt-4 text-sm">
         <a href={`/betaling/retur?ref=${ref}`} className="text-pine underline">
           Oppdater

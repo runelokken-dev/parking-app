@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { addDays, parseDateKey } from "@/lib/dates";
+import { syncPayment } from "@/lib/payments";
 import { prisma } from "@/lib/prisma";
 import { clearAdmin, isAdmin, setAdmin } from "@/lib/session";
 
@@ -112,6 +113,15 @@ export async function cancelBookingAsAdmin(formData: FormData) {
     where: { id },
     data: { status: "CANCELLED" },
   });
+  revalidatePath("/admin");
+}
+
+// Spør Vipps om faktisk status på en ventende booking og oppdaterer den.
+export async function syncBookingAsAdmin(formData: FormData) {
+  requireAdmin();
+  const ref = String(formData.get("ref") || "");
+  if (!ref) return;
+  await syncPayment(ref);
   revalidatePath("/admin");
 }
 

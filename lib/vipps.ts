@@ -66,6 +66,7 @@ async function logAndThrow(context: string, res: Response): Promise<never> {
 async function getAccessToken(): Promise<string> {
   const res = await fetch(`${vippsBaseUrl()}/accesstoken/get`, {
     method: "POST",
+    cache: "no-store",
     headers: commonHeaders({
       client_id: process.env.VIPPS_CLIENT_ID!,
       client_secret: process.env.VIPPS_CLIENT_SECRET!,
@@ -127,6 +128,7 @@ export async function getPaymentState(reference: string): Promise<PaymentState> 
     `${vippsBaseUrl()}/epayment/v1/payments/${reference}`,
     {
       headers: commonHeaders({ Authorization: `Bearer ${token}` }),
+      cache: "no-store",
     }
   );
   if (!res.ok) {

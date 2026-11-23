@@ -11,6 +11,7 @@ import {
   adminLogout,
   cancelBookingAsAdmin,
   deleteBooking,
+  syncBookingAsAdmin,
   deleteBookingsInPeriod,
   deleteApartment,
   deleteSpot,
@@ -310,12 +311,21 @@ export default async function AdminPage({
                   <span>· Leil. {b.apartment.number}</span>
                   <div className="text-xs text-muted">
                     {formatDateTime(b.startTime)} – {formatDateTime(b.endTime)} · {b.priceKr},- kr
+                    {b.vippsState ? ` · Vipps: ${b.vippsState}` : ""}
                   </div>
                 </div>
                 <div className="flex flex-shrink-0 items-center gap-2">
                   <span className={`rounded px-2 py-0.5 text-xs font-medium ${STATUS_CLASS[b.status]}`}>
                     {STATUS_LABEL[b.status]}
                   </span>
+                  {b.status === "PENDING" && b.paymentRef && (
+                    <form action={syncBookingAsAdmin}>
+                      <input type="hidden" name="ref" value={b.paymentRef} />
+                      <button type="submit" className="text-xs text-pine underline">
+                        Sjekk Vipps
+                      </button>
+                    </form>
+                  )}
                   {(b.status === "CONFIRMED" || b.status === "PENDING") && (
                     <form action={cancelBookingAsAdmin}>
                       <input type="hidden" name="id" value={b.id} />
